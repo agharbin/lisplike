@@ -16,13 +16,19 @@ def isnumeric(char):
     if ord(char) in range(ord('0'),ord('9')): return True
     else: return False
 
+def issymbol(char):
+    if char == "+" or char == "-" or char == "*" or char == "/":
+        return True
+    else:
+        return False
+
 def tokenize_start(char,value):
     if   char == "(": return ("START", "LPAREN","")
     elif char == ")": return ("START", "RPAREN","")
     elif char == "[": return ("START", "LBRACK","")
     elif char == "]": return ("START", "RBRACK","")
     elif char == "\"": return ("STRING", "", "")
-    elif isalpha(char): return ("ID","",char)
+    elif isalpha(char) or issymbol(char): return ("ID","",char)
     elif isnumeric(char): return ("NUM","",char)
     else: return ("START", "", "")
 
