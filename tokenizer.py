@@ -33,7 +33,7 @@ def tokenize_start(char,value):
     else: return ("START", "", "")
 
 def tokenize_id(char,value):
-    if isalpha(char): return ("ID","",value + char)
+    if isalpha(char) or isnumeric(char): return ("ID","",value + char)
     else: return ("START", "ID", value) 
 
 def tokenize_num(char, value):
