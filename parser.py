@@ -4,7 +4,7 @@ import sys
 token_stream = []
 next_token = []
 
-var_dict = {}
+environment = {}
 
 def add_items(args):
     return reduce(lambda x,y: ("INT",x[1]+y[1]), args, ("INT",0))
@@ -19,17 +19,17 @@ def div_items(args):
     return ("INT", args[0][1] / args[1][1])
 
 def define(args):
-    var_dict[args[0][1]] = args[1]
+    environment[args[0][1]] = args[1]
 
 def expect(item, t_type):
     if item[0] != t_type:
         print "Error: expected", t_type
         sys.exit()
 
-var_dict["+"] = ("FUNC", add_items)
-var_dict["-"] = ("FUNC", sub_items)
-var_dict["*"] = ("FUNC", mult_items)
-var_dict["/"] = ("FUNC", div_items)
+environment["+"] = ("FUNC", add_items)
+environment["-"] = ("FUNC", sub_items)
+environment["*"] = ("FUNC", mult_items)
+environment["/"] = ("FUNC", div_items)
 
 def get_next():
     global token_stream
@@ -45,63 +45,63 @@ def apply_func(f, args):
     return f[1](args)
 
 def lookup(id_name):
-    if id_name not in var_dict:
+    if id_name not in environment:
         print "Error:", id_name, "not defined"
         sys.exit()
-    return var_dict[id_name]
+    return environment[id_name]
+
+def evaluate(expr):
+    if isinstance(expr, tuple):
+        if expr[0] == "ID":
+            return lookup(expr[1])
+        else:
+            return expr # literal
+    elif isinstance(expr, list): # We have a function application
+        f = expr[0]
+        if f[1] == "DEF":
+            name = expr[1]
+            val  = expr[2]
+            environment[name[1]] = evaluate(val)
+        else: # function application
+            func = evaluate(f)
+            args = []
+            for e in expr[1:]:
+                args.append(evaluate(e))
+            return apply_func(func, args)
+    else: # error
+        print "Evaluate error"
+
 
 def parse_expression():
     global next_token
 
-    if next_token[0] == "ID":
-        result = next_token[1]
-        get_next()
-        return lookup(result)
-    elif next_token[0] == "INT":
-        result = int(next_token[1])
-        get_next()
-        return ("INT",result)
-    elif next_token[0] == "FLOAT":
-        result = float(next_token[1])
-        get_next()
-        return ("FLOAT",result)
-    elif next_token[0] == "STRING":
-        result = next_token[1]
-        get_next()
-        return ("STRING",result)
-    elif next_token[0] == "LPAREN":
+    if next_token[0] == "LPAREN":
         get_next() # skip left parentheses
 
-        expect(next_token,"ID")
+        elements = []
+        while next_token[0] != "RPAREN":
+            elements.append(parse_expression())
 
-        # Handle define calls
-        if next_token[1] == "DEF":
-            get_next()
-            name = next_token[1]
-
-            get_next()
-            rest = parse_expression()
-
-            var_dict[name] = rest
-            
-            expect(next_token,"RPAREN")
-            get_next() # move past right paren
-        # Handle function calls
-        else:
-            func = parse_expression() # get function name
-
-            args = []
-            while next_token[0] != "RPAREN":
-                args.append(parse_expression())
-
-            get_next() # advance past right paren
-            return apply_func(func, args)
+        get_next() # advance past right paren
+        return elements
+    elif next_token[0] == "INT":
+        result = ("INT",int(next_token[1]))
+        get_next()
+        return result
+    elif next_token[0] == "FLOAT":
+        result = ("INT",int(next_token[1]))
+        get_next()
+        return result
+    else: # String type
+        result = next_token
+        get_next()
+        return result
 
 def parse():
     global next_token
     
     while next_token != "EOF":
-        result = parse_expression()
+        result = evaluate(parse_expression())
     return result
 
 if __name__ == "__main__":
